@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kamus Futsal - Leksikografi USD</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN for sleek icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        /* Menggunakan font Inter untuk tampilan yang bersih dan profesional */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000080; /* Warna dasar biru tua */
+            color: #E0E0FF; /* Teks putih kebiruan */
+        }
+        /* Custom gradient for the body/main container */
+        .dictionary-background {
+            /* Gradien dari Biru Tua (#000080) ke Abu Kebiruan (#6A8DAD) */
+            background: linear-gradient(180deg, #000080 0%, #305070 50%, #6A8DAD 100%);
+            min-height: 100vh;
+        }
+        /* Style untuk entri kata */
+        .entry-card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .entry-card:hover {
+            transform: translateY(-2px);
+        }
+        /* Style untuk scrollbar (mempercantik) */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a3a5a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #6A8DAD;
+            border-radius: 4px;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 128, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        /* Sticky header */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background-color: #000080;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="dictionary-background">
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="text-white text-xl flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Memuat...
+        </div>
+    </div>
+    
+    <!-- Sticky Header (Search and Title) -->
+    <header class="sticky-header p-4 lg:p-6">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-white text-3xl font-extrabold text-center mb-2 mt-4">Kamus Futsal</h1>
+            <p class="text-center text-sm mb-4 text-gray-300">Ponsiana N. Salakkokoai</p>
+            
+            <!-- Search Bar (Dominant) -->
+            <div class="relative w-full">
+                <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Cari istilah, definisi, atau sinonim..." 
+                       class="w-full p-4 pl-12 bg-gray-100 text-gray-800 rounded-xl shadow-lg focus:outline-none focus:ring-4 focus:ring-[#6A8DAD]">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <i data-lucide="search" class="w-5 h-5 text-gray-500"></i>
+                </div>
+                <!-- Autocomplete/Suggestions -->
+                <div id="autocompleteList" class="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-60 overflow-y-auto z-50 hidden">
+                    <!-- Suggestions will be inserted here -->
+                </div>
+            </div>
+            
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-4xl mx-auto p-4 pt-6 lg:p-6">
+        
+        <!-- Header Notes -->
+        <p class="text-center text-xs italic opacity-80 mb-8 mt-4">
+            Digunakan untuk perkuliahan Leksikografi dan Penyusunan Kamus di USD
+        </p>
+
+        <!-- Dictionary Entries Container -->
+        <div id="dictionaryContainer" class="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <!-- Entries will be dynamically inserted here -->
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="hidden text-center p-8 mt-10 bg-gray-700/50 rounded-xl">
+            <p class="text-xl font-semibold mb-3">Istilah tidak ditemukan.</p>
+            <p class="text-sm mb-4">Ingin mencarinya di Google?</p>
+            <a id="googleSearchLink" href="#" target="_blank" class="inline-flex items-center px-4 py-2 bg-[#6A8DAD] text-white font-medium rounded-full hover:bg-opacity-80 transition duration-150">
+                <i data-lucide="external-link" class="w-4 h-4 mr-2"></i> Cari di Google
+            </a>
+        </div>
+        
+    </main>
+
+    <!-- Modal for Success/Error Messages -->
+    <div id="messageModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full">
+            <h3 id="modalTitle" class="text-xl font-bold text-gray-800 mb-3">Pesan</h3>
+            <p id="modalBody" class="text-gray-600 mb-4">Teks pesan.</p>
+            <button onclick="document.getElementById('messageModal').classList.add('hidden')" class="w-full py-2 bg-[#000080] text-white rounded-lg hover:bg-[#305070]">Tutup</button>
+        </div>
+    </div>
+
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        setLogLevel('Debug');
+        
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const dictionaryContainer = document.getElementById('dictionaryContainer');
+        const noResults = document.getElementById('noResults');
+        
+        // --- Global Variables (Mandatory for Canvas Environment) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-futsal-dictionary';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { /* placeholder config */ };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let app, db, auth, userId = null;
+        let bookmarks = {}; // Key: term (uppercase), Value: true
+        let dictionaryData = [];
+
+        // Function to show custom modal
+        window.showMessage = (title, body) => {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').textContent = body;
+            document.getElementById('messageModal').classList.remove('hidden');
+        };
+
+        // --- Data Definitions (Parsed from Request) ---
+        const rawDictionary = [
+            { term: "Advantage", indonesian: "Keuntungan", definition: "Keputusan wasit untuk melanjutkan permainan meskipun terjadi pelanggaran kecil, karena tim yang dilanggar masih menguasai bola." },
+            { term: "Aggressive Play", indonesian: "Permainan Agresif", definition: "Gaya bermain dengan tekanan tinggi, cepat, dan fisik kuat." },
+            { term: "Air Pass", indonesian: "", definition: "Umpan yang dikirim melalui udara, biasanya untuk melewati lawan." },
+            { term: "Alley", indonesian: "Lorong Serangan", definition: "Ruang kosong di sisi lapangan yang digunakan pemain sayap untuk menyerang." },
+            { term: "Anchor", indonesian: "Pivot Belakang", definition: "Pemain bertahan utama yang menjadi pengatur permainan dari belakang." },
+            { term: "Attack", indonesian: "Serangan", definition: "Upaya tim untuk mencetak gol dengan menguasai bola di area lawan." },
+            { term: "Attacking Half", indonesian: "", definition: "Separuh lapangan lawan tempat tim melakukan serangan." },
+            { term: "Assist", indonesian: "", definition: "Umpan terakhir sebelum gol dicetak." },
+            { term: "Area Penalti", indonesian: "", definition: "Wilayah di depan gawang tempat penjaga gawang boleh menggunakan tangan." },
+            { term: "Advance Pass", indonesian: "Operan ke depan", definition: "Operan ke depan untuk mendorong serangan." },
+            { term: "Backpass", indonesian: "Umpan ke penjaga gawang", definition: "Umpan ke penjaga gawang dari rekan satu tim; kiper tidak boleh menangkapnya dengan tangan." },
+            { term: "Bench", indonesian: "Bangku Cadangan", definition: "Tempat duduk bagi pemain dan pelatih di luar lapangan." },
+            { term: "Blue Card", indonesian: "Kartu peringatan ringan", definition: "Kartu peringatan ringan dalam futsal tertentu (di beberapa liga atau turnamen)." },
+            { term: "Booking", indonesian: "", definition: "Istilah umum untuk pemain yang mendapat kartu kuning." },
+            { term: "Caution", indonesian: "Peringatan", definition: "Teguran resmi dari wasit yang biasanya disertai kartu kuning." },
+            { term: "Charge", indonesian: "", definition: "Kontak fisik antar pemain untuk merebut bola." },
+            { term: "Clearance", indonesian: "", definition: "Tindakan menendang bola menjauh dari area pertahanan." },
+            { term: "Corner Kick", indonesian: "Tendangan Sudut", definition: "Tendangan dari pojok lapangan setelah bola keluar oleh pemain lawan." },
+            { term: "Delay of Game", indonesian: "", definition: "Pelanggaran karena mengulur waktu dalam restart permainan." },
+            { term: "Dissent", indonesian: "", definition: "Protes keras kepada wasit yang dapat berujung kartu." },
+            { term: "Double Touch", indonesian: "", definition: "Kesalahan ketika pemain menyentuh bola dua kali berturut-turut pada situasi bola mati." },
+            { term: "Drop Ball", indonesian: "", definition: "Cara wasit melanjutkan permainan setelah dihentikan tanpa pelanggaran." },
+            { term: "Dangerous Play", indonesian: "", definition: "Gerakan yang membahayakan lawan meskipun tanpa kontak fisik." },
+            { term: "Discipline", indonesian: "Kedisiplinan", definition: "Kepatuhan pemain terhadap aturan futsal" },
+            { term: "Direct Free Kick", indonesian: "Tendangan Bebas Langsung", definition: "Tendangan bebas yang bisa langsung mengarah ke gawang dan menghasilkan gol." },
+            { term: "Dribble", indonesian: "Menggiring Bola", definition: "Mengontrol bola sambil bergerak untuk melewati lawan." },
+            { term: "Dummy", indonesian: "Tipuan", definition: "Gerakan berpura-pura menendang atau menyentuh bola untuk mengecoh lawan." },
+            { term: "Drop Kick", indonesian: "", definition: "Tendangan oleh kiper setelah bola dijatuhkan ke lantai." },
+            { term: "Deflect", indonesian: "Pantulan", definition: "Bola berubah arah setelah mengenai pemain lain." },
+            { term: "Dive", indonesian: "Diving", definition: "Pura-pura jatuh untuk mendapatkan pelanggaran." },
+            { term: "Drive Shot", indonesian: "", definition: "Tendangan keras dan lurus ke arah gawang." },
+            { term: "Drag Back", indonesian: "", definition: "Teknik menarik bola ke belakang dengan telapak kaki." },
+            { term: "Double Pass", indonesian: "Umpan 1-2", definition: "Kombinasi dua pemain yang saling mengoper cepat untuk menembus pertahanan." },
+            { term: "Dummy Run", indonesian: "", definition: "Pergerakan tanpa bola untuk menarik lawan." },
+            { term: "Dodge", indonesian: "", definition: "Gerakan menghindar dari lawan dengan kontrol bola cepat" },
+            { term: "Goalkeeper", indonesian: "Penjaga Gawang", definition: "Pemain yang bertugas menjaga gawang agar tidak kebobolan." },
+            { term: "Pivot", indonesian: "", definition: "Pemain depan yang menjadi titik fokus serangan dan penahan bola." },
+            { term: "Fix", indonesian: "Fixo", definition: "Pemain bertahan utama yang mengatur lini belakang." },
+            { term: "Ala", indonesian: "", definition: "Pemain sayap yang berperan menyerang dan bertahan di sisi lapangan." },
+            { term: "Flank", indonesian: "Sayap", definition: "Posisi pemain di kanan atau kiri yang sering melakukan serangan cepat." },
+            { term: "Captain", indonesian: "Kapten Tim", definition: "Pemimpin di lapangan yang berkomunikasi dengan wasit dan mengatur rekan setim." },
+            { term: "Substitute", indonesian: "Pemain Cadangan", definition: "Pemain pengganti yang masuk menggantikan pemain utama." },
+            { term: "Rotation", indonesian: "Rotasi", definition: "Pergantian posisi antar pemain selama permainan untuk membingungkan lawan." },
+            { term: "Target Man", indonesian: "", definition: "Pemain depan yang menahan bola dan menunggu dukungan rekan." },
+            { term: "Support Player", indonesian: "", definition: "Pemain yang selalu memberi opsi umpan bagi penguasaan bola." },
+            { term: "Ball", indonesian: "Bola", definition: "Bola futsal memiliki ukuran lebih kecil dan pantulan lebih rendah dibanding bola sepak biasa." },
+            { term: "Deker", indonesian: "Shin Guard", definition: "Pelindung tulang kering agar terhindar dari cedera." },
+            { term: "Elbow Pad", indonesian: "", definition: "Pelindung siku untuk penjaga gawang." },
+            { term: "Finger Tape", indonesian: "", definition: "Pita pelindung jari bagi kiper yang tidak menggunakan sarung tangan." },
+            { term: "Goal", indonesian: "Gawang", definition: "Tempat bola harus masuk untuk mencetak skor." },
+            { term: "Goal Net", indonesian: "Jaring Gawang", definition: "Menahan bola yang masuk ke gawang" },
+            { term: "Shoes", indonesian: "Sepatu Futsal", definition: "Sepatu dengan sol datar tanpa pul untuk lantai datar." },
+            { term: "Jersey", indonesian: "Seragam", definition: "Pakaian tim dengan warna dan nomor identitas." },
+            { term: "Captain Armband", indonesian: "Ban Kapten", definition: "Penanda pemain yang menjadi kapten." },
+            { term: "Knee Pad", indonesian: "", definition: "Pelindung lutut untuk mencegah cedera saat jatuh." },
+            { term: "Formation", indonesian: "Formasi", definition: "Pola posisi pemain di lapangan, seperti 2-2, 3-1, atau 1-2-1." },
+            { term: "Pressing", indonesian: "", definition: "Tekanan cepat terhadap pemain lawan yang menguasai bola." },
+            { term: "Zonal Marking", indonesian: "", definition: "Menjaga area tertentu, bukan pemain secara individu." },
+            { term: "Man-to-Man Marking", indonesian: "", definition: "Menjaga lawan secara langsung." },
+            { term: "Counter Attack", indonesian: "Serangan Balik", definition: "Serangan cepat setelah merebut bola dari lawan." },
+            { term: "Rotation Play", indonesian: "", definition: "Pergantian posisi dinamis selama menyerang." },
+            { term: "Set Play", indonesian: "", definition: "Pola serangan dari situasi bola mati seperti corner atau free kick." },
+            { term: "Power Play", indonesian: "", definition: "Strategi dengan mengganti kiper menjadi pemain tambahan untuk menambah serangan." },
+            { term: "Screening", indonesian: "", definition: "Menutupi lawan agar rekan satu tim mendapat ruang." },
+            { term: "Transition", indonesian: "Transisi", definition: "Perpindahan cepat antara bertahan dan menyerang." },
+            { term: "Kick-off", indonesian: "", definition: "Tendangan awal untuk memulai babak." },
+            { term: "Kick-in", indonesian: "Tendangan ke Dalam", definition: "Dilakukan dari garis samping saat bola keluar lapangan." },
+            { term: "Penalty Kick", indonesian: "Tendangan Penalti", definition: "Tendangan dari titik penalti setelah pelanggaran di area gawang." },
+            { term: "Free Kick", indonesian: "Tendangan Bebas", definition: "Diberikan setelah pelanggaran, bisa langsung atau tidak langsung." },
+            { term: "Throw-in", indonesian: "", definition: "Tidak digunakan dalam futsal (diganti kick-in)." },
+            { term: "Four-Second Rule", indonesian: "", definition: "Pemain harus melakukan restart dalam empat detik." },
+            { term: "Accumulated Foul", indonesian: "Pelanggaran Akumulatif", definition: "Setelah 5 pelanggaran, lawan mendapat tendangan bebas tanpa pagar." },
+            { term: "Referee", indonesian: "Wasit", definition: "Pengadil lapangan utama yang mengontrol jalannya pertandingan." },
+            { term: "Second Referee", indonesian: "", definition: "Membantu wasit utama di sisi berlawanan." },
+            { term: "Timekeeper", indonesian: "Pengatur Waktu", definition: "Petugas yang mengatur durasi pertandingan dan pelanggaran waktu." },
+            { term: "Chip Shot", indonesian: "", definition: "Tendangan melambung untuk melewati kiper." },
+            { term: "Volley Shot", indonesian: "", definition: "Menendang bola sebelum menyentuh lantai." },
+            { term: "Header", indonesian: "Sundulan", definition: "Jarang dilakukan karena bola futsal lebih rendah pantulannya." },
+            { term: "Cut Back", indonesian: "", definition: "Umpan tarik ke belakang ke pemain yang siap menembak." },
+            { term: "Cross Pass", indonesian: "", definition: "Umpan melintang dari sayap ke tengah." },
+            { term: "Block", indonesian: "", definition: "Menghalangi tendangan atau umpan lawan dengan tubuh." },
+            { term: "Slide Tackle", indonesian: "", definition: "Menghalangi bola dengan menjatuhkan diri (harus bersih dari kontak kaki lawan)." },
+            { term: "Interception", indonesian: "", definition: "Memotong bola dari lawan." },
+            { term: "Recovery Run", indonesian: "", definition: "Lari cepat kembali ke posisi bertahan setelah kehilangan bola." },
+            { term: "Press Trap", indonesian: "", definition: "Menjebak lawan di area sempit melalui tekanan terkoordinasi." },
+            { term: "Advantage Rule", indonesian: "Aturan Keuntungan", definition: "Permainan diteruskan jika tim yang dilanggar masih memegang keuntungan bola." },
+            { term: "Whistle", indonesian: "Peluit", definition: "Digunakan wasit untuk menghentikan atau memulai permainan." },
+            { term: "Time-out", indonesian: "", definition: "Setiap tim berhak meminta jeda 1 menit di tiap babak." },
+            { term: "Match Duration", indonesian: "Durasi Pertandingan", definition: "Dua babak masing-masing 20 menit waktu efektif." },
+            { term: "Extra Time", indonesian: "", definition: "Waktu tambahan jika skor imbang di fase gugur." },
+            { term: "Penalty Shootout", indonesian: "Adu Penalti", definition: "Adu penalti jika masih imbang setelah perpanjangan waktu." },
+            { term: "Scoreline", indonesian: "Skor Akhir", definition: "Hasil akhir pertandingan." },
+            { term: "Substitution Zone", indonesian: "Area Pergantian", definition: "Tempat resmi pergantian pemain." },
+            { term: "Red Card", indonesian: "Kartu Merah", definition: "Diberikan untuk pelanggaran berat; pemain dikeluarkan dari lapangan." },
+            { term: "Yellow Card", indonesian: "Kartu Kuning", definition: "Peringatan untuk pelanggaran ringan atau perilaku tidak sportif." },
+            { term: "Nutmeg", indonesian: "Ngolong", definition: "Melewatkan bola di antara kaki lawan." },
+            { term: "Fake Shot", indonesian: "Tendangan Pura-Pura", definition: "Tipuan dengan pura-pura menendang bola untuk mengecoh lawan." },
+            { term: "Give and Go", indonesian: "", definition: "Teknik umpan dan lari cepat untuk menerima kembali bola dari rekan setim." },
+            { term: "One-Two Pass", indonesian: "Umpan Satu-Dua", definition: "Kombinasi cepat antara dua pemain untuk membuka ruang serangan." },
+            { term: "Solo Run", indonesian: "", definition: "Aksi individu menggiring bola dari tengah lapangan hingga mendekati gawang." },
+            { term: "Under Pressure", indonesian: "", definition: "Kondisi pemain saat mendapat tekanan dari lawan." },
+            { term: "Turn Move", indonesian: "", definition: "Gerakan memutar badan cepat untuk mengganti arah bola." },
+            { term: "Wall Pass", indonesian: "", definition: "Umpan yang dikembalikan seketika oleh rekan untuk melewati pemain lawan." },
+            { term: "Save", indonesian: "Penyelamatan", definition: "Aksi kiper menghentikan bola agar tidak masuk ke gawang." },
+            { term: "Clean Sheet", indonesian: "", definition: "Kondisi ketika kiper tidak kebobolan selama pertandingan." },
+            { term: "Warm Up", indonesian: "Pemanasan", definition: "Persiapan tubuh sebelum pertandingan untuk menghindari cedera dan meningkatkan performa." },
+            { term: "Cool Down", indonesian: "Pendinginan", definition: "Peregangan ringan setelah bermain untuk membantu pemulihan otot." },
+            { term: "Agility", indonesian: "Kelincahan", definition: "Kemampuan bergerak cepat dengan kontrol tubuh yang baik." },
+            { term: "Endurance", indonesian: "Daya Tahan", definition: "Kemampuan bertahan bermain dalam intensitas tinggi dalam waktu lama." },
+            { term: "Sprint", indonesian: "", definition: "Lari cepat jarak pendek untuk mengejar atau membawa bola." },
+            { term: "Stamina", indonesian: "", definition: "Daya tahan tubuh terhadap kelelahan selama pertandingan." },
+            { term: "Coordination", indonesian: "Koordinasi", definition: "Sinkronisasi gerakan antara mata, kaki, dan tubuh agar kontrol bola lebih baik." },
+            { term: "Reaction Time", indonesian: "Waktu Reaksi", definition: "Kecepatan respon terhadap bola atau gerakan lawan." },
+            { term: "Footwork", indonesian: "Kerja Kaki", definition: "Teknik dasar pergerakan kaki yang cepat dan efisien." },
+            { term: "Balance", indonesian: "Keseimbangan", definition: "Kemampuan menjaga tubuh tetap stabil saat bergerak atau setelah kontak fisik." },
+            { term: "Call", indonesian: "Panggilan", definition: "Komunikasi verbal antar pemain untuk mengatur posisi atau memberi instruksi cepat." },
+            { term: "Signal Play", indonesian: "", definition: "Isyarat tangan atau gerakan tertentu untuk menjalankan pola serangan." },
+            { term: "Tactical Foul", indonesian: "", definition: "Pelanggaran sengaja untuk menghentikan serangan lawan yang berpotensi berbahaya." },
+            { term: "Man Advantage", indonesian: "", definition: "Kondisi ketika tim lawan kehilangan pemain karena kartu merah, sehingga satu tim unggul jumlah pemain." },
+            { term: "Game Plan", indonesian: "", definition: "Strategi keseluruhan yang disusun pelatih sebelum pertandingan dimulai." },
+            { term: "Half Time Talk", indonesian: "", definition: "Arahan dari pelatih kepada pemain saat jeda babak pertama." },
+            { term: "Timeout Strategy", indonesian: "", definition: "Pola permainan yang disusun dan diterapkan ketika tim menggunakan waktu jeda (time-out)." },
+            { term: "Teamwork", indonesian: "Kerjasama Tim", definition: "Kolaborasi antar pemain untuk mencapai tujuan bersama." },
+            { term: "Communication", indonesian: "Komunikasi", definition: "Pertukaran informasi antar pemain di lapangan untuk menjaga koordinasi." },
+            { term: "Motivation", indonesian: "Motivasi", definition: "Dorongan mental yang membuat pemain berusaha maksimal selama pertandingan." },
+            { term: "League", indonesian: "Liga", definition: "Kompetisi reguler antar klub yang berlangsung dalam jangka waktu tertentu dan menggunakan sistem poin untuk menentukan peringkat." },
+            { term: "Tournament", indonesian: "Turnamen", definition: "Ajang kompetisi singkat yang biasanya menggunakan sistem gugur atau grup untuk menentukan juara." },
+            { term: "Friendly Match", indonesian: "Laga Persahabatan", definition: "Pertandingan non-kompetitif yang diadakan tanpa perebutan poin resmi, bertujuan untuk latihan, uji coba strategi, atau mempererat hubungan antar tim." },
+            { term: "Home Ground", indonesian: "Kandang", definition: "Tempat atau lapangan utama tempat tim menjadi tuan rumah dalam pertandingan." },
+            { term: "Away Match", indonesian: "Tandang", definition: "Pertandingan yang dimainkan di markas lawan dengan kondisi dan dukungan penonton yang berbeda dari kandang sendiri." },
+            { term: "Referee Committee", indonesian: "Komisi Wasit", definition: "Badan resmi yang bertanggung jawab atas pengawasan, penilaian, dan pembinaan wasit dalam suatu kompetisi futsal." },
+            { term: "Kick-Off Ceremony", indonesian: "", definition: "Acara pembukaan resmi sebelum pertandingan atau turnamen dimulai, biasanya diiringi dengan kegiatan seremonial dan hiburan." },
+            { term: "Official Match", indonesian: "Pertandingan Resmi", definition: "Pertandingan yang diakui secara resmi oleh asosiasi atau federasi futsal, di mana hasilnya berpengaruh terhadap klasemen atau statistik resmi." },
+            { term: "Scoreboard", indonesian: "Papan Skor", definition: "Layar atau papan digital yang menampilkan hasil sementara pertandingan, waktu, dan informasi penting lainnya." },
+            { term: "Fair Play", indonesian: "", definition: "Prinsip bermain secara jujur, sportif, menghormati lawan, wasit, serta mematuhi peraturan permainan." },
+            { term: "Goal Difference", indonesian: "Selisih Gol", definition: "Selisih antara jumlah gol dan gol kebobolan." },
+            { term: "Possession", indonesian: "Penguasaan Bola", definition: "Persentase waktu tim menguasai bola." },
+            { term: "Pass Accuracy", indonesian: "Akurasi Umpan", definition: "Persentase keberhasilan umpan." },
+            { term: "Shot on Target", indonesian: "Tembakan Tepat Sasaran", definition: "Tembakan yang mengarah ke gawang." },
+            { term: "Foul Count", indonesian: "Jumlah Pelanggaran", definition: "Total pelanggaran yang dilakukan tim." },
+            { term: "Save Percentage", indonesian: "Persentase Penyelamatan", definition: "Rasio penyelamatan kiper terhadap tembakan." },
+            { term: "Goal Scorer", indonesian: "Pencetak Gol", definition: "Pemain yang berhasil mencetak gol." },
+            { term: "Assist Leader", indonesian: "", definition: "Pemain dengan jumlah assist terbanyak." },
+            { term: "Clean Sheet Count", indonesian: "", definition: "Jumlah pertandingan tanpa kebobolan." },
+            { term: "Disciplinary Record", indonesian: "Catatan Disiplin", definition: "Jumlah kartu dan pelanggaran pemain." },
+            { term: "Sportsmanship", indonesian: "Sportivitas", definition: "Sikap menghargai lawan dan keputusan wasit." },
+            { term: "Respect", indonesian: "Rasa Hormat", definition: "Menghargai sesama pemain, pelatih, dan ofisial." },
+            { term: "Team Spirit", indonesian: "Semangat Tim", definition: "Kekompakan dan kebersamaan dalam tim." },
+            { term: "Leadership", indonesian: "Kepemimpinan", definition: "Kemampuan mengarahkan dan memberi contoh bagi tim." }
+        ];
+
+        // Function to assign a technical example (placeholder for now, or actual example if available)
+        const getExample = (term) => {
+            // Simple placeholder examples for technical context
+            switch(term) {
+                case "Advantage":
+                    return "Wasit menerapkan **Advantage** setelah pemain bertahan hanya menyentuh kaki tanpa mengubah alur bola, memungkinkan tim penyerang melanjutkan serangan.";
+                case "Anchor":
+                    return "Saat skema '3-1', **Anchor** bertugas menjaga kedalaman dan memulai sirkulasi bola dari belakang.";
+                case "Power Play":
+                    return "Tim yang tertinggal skor menggunakan strategi **Power Play** dengan mengganti penjaga gawang menjadi seorang pivot tambahan.";
+                case "Nutmeg":
+                    return "Pemain sayap melakukan trik **Nutmeg** yang sukses sebelum melepaskan umpan silang.";
+                case "Double Pass":
+                    return "Untuk menembus pertahanan man-to-man, dua pemain melakukan **Double Pass** yang cepat di area sayap.";
+                default:
+                    return `Pemain harus memahami pentingnya **${term}** dalam situasi pertandingan krusial.`;
+            }
+        };
+
+        // Pre-process data
+        dictionaryData = rawDictionary.map(item => ({
+            ...item,
+            // Format today's date
+            updated: "14/10/2025",
+            // Clean up synonyms/thesaurus for display and search
+            synonyms: item.indonesian.split('/').map(s => s.trim()).filter(s => s),
+            // Example usage
+            example: getExample(item.term),
+            // Unique ID for Firestore
+            id: item.term.toUpperCase().replace(/\s/g, '_'),
+            // Combined string for fuzzy search
+            searchString: `${item.term.toUpperCase()} ${item.indonesian.toUpperCase()} ${item.definition.toUpperCase()}`
+        })).sort((a, b) => a.term.localeCompare(b.term)); // Sort alphabetically
+
+        // --- Firebase Functions ---
+        const initFirebase = async () => {
+            loadingOverlay.classList.remove('hidden');
+            try {
+                if (!app) {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    // Authentication
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            console.log("Authenticated with UID:", userId);
+                            // Start listening to bookmarks only after auth is ready
+                            listenToBookmarks();
+                        } else {
+                            // If anonymous sign-in fails or user signs out, use a temporary ID
+                            userId = crypto.randomUUID();
+                            console.log("Using temporary ID:", userId);
+                            // Still need to call render, but bookmarking will fail without proper auth
+                            renderDictionary(dictionaryData);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error("Error initializing Firebase or Auth:", error);
+                showMessage("Kesalahan Koneksi", "Gagal menghubungkan ke layanan bookmark. Fungsi penyimpanan tidak akan tersedia.");
+                renderDictionary(dictionaryData); // Render dictionary even if Firebase fails
+            } finally {
+                // Initial render happens in listenToBookmarks or the error catch block
+            }
+        };
+        
+        const getBookmarkPath = (termId) => {
+            if (!userId) return null;
+            return doc(db, `artifacts/${appId}/users/${userId}/futsal_bookmarks`, termId);
+        };
+
+        const listenToBookmarks = () => {
+            if (!db || !userId) return;
+
+            const q = collection(db, `artifacts/${appId}/users/${userId}/futsal_bookmarks`);
+
+            onSnapshot(q, (snapshot) => {
+                bookmarks = {};
+                snapshot.forEach((doc) => {
+                    bookmarks[doc.id] = true;
+                });
+                console.log("Bookmarks updated:", Object.keys(bookmarks));
+                // Re-render to show updated bookmark status
+                renderDictionary(dictionaryData);
+                loadingOverlay.classList.add('hidden');
+            }, (error) => {
+                console.error("Error listening to bookmarks:", error);
+                showMessage("Kesalahan Data", "Gagal memuat daftar bookmark Anda.");
+                loadingOverlay.classList.add('hidden');
+            });
+        };
+
+        window.toggleBookmark = async (termId, isBookmarked) => {
+            if (!userId || !db) {
+                showMessage("Akses Ditolak", "Anda tidak dapat menyimpan bookmark. Coba muat ulang aplikasi.");
+                return;
+            }
+            loadingOverlay.classList.remove('hidden');
+            const bookmarkRef = getBookmarkPath(termId);
+
+            try {
+                if (isBookmarked) {
+                    // Remove bookmark
+                    await deleteDoc(bookmarkRef);
+                    showMessage("Bookmark Dihapus", `Istilah '${termId.replace(/_/g, ' ')}' berhasil dihapus dari bookmark.`);
+                } else {
+                    // Add bookmark
+                    await setDoc(bookmarkRef, {
+                        termId: termId,
+                        timestamp: new Date().toISOString()
+                    });
+                    showMessage("Bookmark Disimpan", `Istilah '${termId.replace(/_/g, ' ')}' berhasil disimpan!`);
+                }
+            } catch (e) {
+                console.error("Error toggling bookmark:", e);
+                showMessage("Kesalahan", "Gagal menyimpan/menghapus bookmark. Silakan coba lagi.");
+            } finally {
+                // Snapshot listener will handle re-rendering, just hide loading
+                loadingOverlay.classList.add('hidden');
+            }
+        };
+        
+        // --- Rendering & Search Logic ---
+
+        const createEntryHTML = (entry) => {
+            const isBookmarked = bookmarks[entry.id] === true;
+            
+            // Thesaurus/Synonym section
+            const thesaurusHTML = entry.synonyms.length > 0
+                ? `<div class="mt-2 text-sm text-gray-300">
+                      <span class="font-semibold mr-1">Sinonim/Indonesia:</span> 
+                      ${entry.synonyms.join(', ')}
+                   </div>`
+                : '';
+
+            // Google Search Link
+            const googleLink = `https://www.google.com/search?q=Futsal+istilah+${encodeURIComponent(entry.term)}`;
+            
+            return `
+                <div class="entry-card bg-[#1a3a5a] p-5 rounded-xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-2xl font-bold text-white">${entry.term}</h2>
+                            <button onclick="toggleBookmark('${entry.id}', ${isBookmarked})" 
+                                    class="p-2 rounded-full transition duration-150 ${isBookmarked ? 'text-yellow-400 bg-yellow-400/20 hover:bg-yellow-400/30' : 'text-gray-400 hover:text-white hover:bg-gray-500/20'}" 
+                                    aria-label="${isBookmarked ? 'Hapus dari Bookmark' : 'Simpan ke Bookmark'}">
+                                <i data-lucide="${isBookmarked ? 'star' : 'star-outline'}" class="w-5 h-5 fill-current"></i>
+                            </button>
+                        </div>
+                        ${thesaurusHTML}
+                        
+                        <p class="text-gray-200 mt-4">${entry.definition}</p>
+                        
+                        <div class="mt-4 pt-3 border-t border-gray-600">
+                            <h3 class="text-sm font-semibold text-[#6A8DAD] mb-1">Contoh Penggunaan:</h3>
+                            <p class="text-sm italic text-gray-300">${entry.example}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 flex justify-between items-end text-xs">
+                        <a href="${googleLink}" target="_blank" class="text-blue-300 hover:text-blue-200 transition duration-150 flex items-center">
+                            <i data-lucide="external-link" class="w-3 h-3 mr-1"></i> Cari di Google
+                        </a>
+                        <span class="text-gray-400">Pembaruan: ${entry.updated}</span>
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderDictionary = (data) => {
+            dictionaryContainer.innerHTML = data.map(createEntryHTML).join('');
+            // Replace lucide icons
+            lucide.createIcons(); 
+
+            // Show/hide no results message
+            if (data.length === 0) {
+                noResults.classList.remove('hidden');
+                // Update Google search link based on current input
+                const query = document.getElementById('searchInput').value;
+                document.getElementById('googleSearchLink').href = `https://www.google.com/search?q=Futsal+${encodeURIComponent(query)}`;
+            } else {
+                noResults.classList.add('hidden');
+            }
+        };
+
+        // Simple fuzzy/substring search function
+        const searchDictionary = (query) => {
+            const q = query.toUpperCase().trim();
+            if (!q) return dictionaryData; // If empty, return all
+
+            // Filter entries
+            const filtered = dictionaryData.filter(entry => 
+                entry.searchString.includes(q)
+            );
+
+            // Simple scoring/ranking (exact match first)
+            filtered.sort((a, b) => {
+                const aScore = a.term.toUpperCase() === q ? 3 : (a.term.toUpperCase().startsWith(q) ? 2 : 1);
+                const bScore = b.term.toUpperCase() === q ? 3 : (b.term.toUpperCase().startsWith(q) ? 2 : 1);
+                return bScore - aScore; // Descending score
+            });
+
+            return filtered;
+        };
+
+        // --- Autocomplete/Search Handler ---
+
+        window.handleSearch = () => {
+            const input = document.getElementById('searchInput');
+            const query = input.value;
+            const autocompleteList = document.getElementById('autocompleteList');
+            
+            if (query.length < 2) {
+                autocompleteList.classList.add('hidden');
+                renderDictionary(dictionaryData); // Show all if query is too short
+                return;
+            }
+
+            const results = searchDictionary(query);
+            renderDictionary(results); // Render full results immediately
+
+            // Autocomplete suggestions (top 5)
+            const suggestions = results.slice(0, 5);
+            
+            autocompleteList.innerHTML = '';
+            if (suggestions.length > 0) {
+                suggestions.forEach(entry => {
+                    const item = document.createElement('div');
+                    item.className = 'p-3 cursor-pointer text-gray-800 hover:bg-gray-100 transition duration-100';
+                    item.textContent = entry.term + (entry.indonesian ? ` (${entry.indonesian})` : '');
+                    item.onclick = () => {
+                        input.value = entry.term; // Set input to exact term
+                        handleSearch(); // Rerun search to filter to just that term (optional, but cleaner)
+                        autocompleteList.classList.add('hidden');
+                    };
+                    autocompleteList.appendChild(item);
+                });
+                autocompleteList.classList.remove('hidden');
+            } else {
+                autocompleteList.classList.add('hidden');
+            }
+        };
+
+        // Event listener to hide autocomplete when clicking outside
+        document.addEventListener('click', (e) => {
+            const autocompleteList = document.getElementById('autocompleteList');
+            const searchInput = document.getElementById('searchInput');
+            if (e.target !== searchInput && e.target.closest('#autocompleteList') === null) {
+                autocompleteList.classList.add('hidden');
+            }
+        });
+
+        // Initialize Firebase and start app
+        window.onload = () => {
+            initFirebase();
+            // Initial render of all data while waiting for auth/bookmarks
+            renderDictionary(dictionaryData); 
+        };
+
+    </script>
+</body>
+</html>
